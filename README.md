@@ -1,30 +1,28 @@
-# Towards Generalizable Neuro-Symbolic Systems for Commonsense Question Answering
-This repository contains the code for the paper "Towards Generalizable Neuro-Symbolic Systems for Commonsense
-Question Answering". See full paper [here](https://arxiv.org/abs/1910.14087)
+# HyKAS - adaptation for the Mowgli framework
 
-## Enviroments
-This code has been tested on Python 3.6.7, Pytorch 1.2 and Transformers 2.3.0 
+Forked from [https://github.com/Mayer123/HyKAS](https://github.com/Mayer123/HyKAS), which contains code for the experiments of this [paper](https://arxiv.org/abs/1910.14087).
 
-## Dataset
-Please download the CommonsenseQA dataset from [the official website](https://www.tau-nlp.org/commonsenseqa)
+## How to run
 
-## ConceptNet Knowledge Extraction
-Go to directory Extraction, then download ConceptNet from [the official website](https://github.com/commonsense/conceptnet5/wiki/Downloads) and uncompress in the current directory. 
-Then simple run:
-```
-python extract_english.py 
-python extract4commonsenseqa.py
-```
+### Step 0. Setup
+
+1. Create conda virtual environment and activate it: `conda create -n hykas python=3.6`, `anaconda conda actuvate hykas`
+2. Run `pip install -r requirements.txt`
+
+This code has been tested on Python 3.6.7, Pytorch 1.2 and Transformers 2.3.0. 
+
+### Step 1. Prepare data
+1. Please download the CommonsenseQA dataset from [the official website](https://www.tau-nlp.org/commonsenseqa).
+2. Go to directory Extraction, then download ConceptNet from [the official website](https://github.com/commonsense/conceptnet5/wiki/Downloads) and uncompress in the current directory.
+3. `python extract_english.py`
+4. `python extract4commonsenseqa.py`
+
 This would generate the files in the data directory. 
 To run extraction on datasets other than CommonsenseQA, you will need to modify the data loading and formatting accordingly. 
 
-## ATOMIC Knowledge Generation 
-Note: If you only need to train models on CommonsenseQA, you can skip this part. 
+**Note: running experiments with atomic (skip for now)** First clone the [comet official repo](https://github.com/atcbosselut/comet-commonsense) and put files in comet-generation under scripts/interactive. Then follow the instructions from official repo to download necessary data/models to run generation.
 
-First clone the [comet official repo](https://github.com/atcbosselut/comet-commonsense) and put files in comet-generation under scripts/interactive 
-Then follow the instructions from official repo to download necessary data/models to run generation
-
-## HyKAS Model Training
+### Step 2. Prepare model
 ```
 CUDA_VISIBLE_DEVICES=0 python run_csqa.py --data_dir data/ --model_type roberta-ocn-inj --model_name_or_path 
 roberta-large --task_name csqa-inj --cache_dir downloaded_models --max_seq_length 80 --do_train --do_eval 
@@ -33,7 +31,9 @@ roberta-large --task_name csqa-inj --cache_dir downloaded_models --max_seq_lengt
 ```
 For CommonsenseQA, the Dev accuracy should get around 79%. 
 
-## Cite 
+### Notes
+
+To cite the original system:
 ```
 @inproceedings{ma-etal-2019-towards,
     title = "Towards Generalizable Neuro-Symbolic Systems for Commonsense Question Answering",
