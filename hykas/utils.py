@@ -10,9 +10,24 @@ logger = logging.getLogger(__name__)
 answerKey_mapping = {'A':0, 'B':1, 'C':2, 'D':3, 'E':4}
 
 
+def ensure_dir_exists(filename):
+	if not os.path.exists(os.path.dirname(filename)):
+		try:
+			os.makedirs(os.path.dirname(filename))
+		except OSError as exc: # Guard against race condition
+			if exc.errno != errno.EEXIST:
+				raise
+
 def save_dict(f, data):
+    ensure_dir_exists(f)
     with open(f, 'wb') as f:
         pickle.dump(data, f)
+
+def save_jsonl(f, data):
+	with open(f, 'w') as fout:
+		for sample in data:
+			json.dump(sample, fout)
+			fout.write('\n')
 
 def accuracy(out, labels):
 	return {'acc': (out == labels).mean()}

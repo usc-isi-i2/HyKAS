@@ -14,8 +14,8 @@ def extract_node_data(node_file):
 		next(f)
 		for line in f:
 			fs=line.split('\t')
-			node2label[fs[0]]=fs[1]
-			node2pos[fs[0]]=fs[3]
+			node2label[fs[0].strip()]=fs[1].strip()
+			node2pos[fs[0].strip()]=fs[3].strip()
 	print('node index ready')
 	return node2label, node2pos
 
@@ -62,7 +62,7 @@ def read_commonsense(fl):
 				word_pos[end_sense] = 1
 
 			#meta = json.loads(line[-1])
-			concept = (start_sense, rela, end_label, end_sense, float(line[3])) # meta['weight'])
+			concept = (start_sense, rela, end_label, end_sense, float(line[4])) # meta['weight'])
 			if len(start_label.split(DELIMITER)) > 1:
 				for w in start_label.split(DELIMITER):
 					if w not in long_en_concepts:

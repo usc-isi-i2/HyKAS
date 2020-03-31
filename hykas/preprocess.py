@@ -11,6 +11,9 @@ tokenizer = tokenization.BasicTokenizer(do_lower_case=True)
 import nltk
 import operator
 allowed_pos = ['JJ', 'NN', 'VB', 'RB']
+delimiter=' '
+min_overlap=0.5
+num_stopwords=20
 
 class Commonsense_GV(object):
 	def __init__(self, start, end):
@@ -63,7 +66,7 @@ def build_dict(data):
 			for w in tokenizer.tokenize(choice):
 				vocab[w] += 1
 	print (len(vocab))
-	stopwords = dict(vocab.most_common(20))
+	stopwords = dict(vocab.most_common(num_stopwords))
 	print (stopwords)
 	return vocab, stopwords
 				
@@ -75,7 +78,7 @@ def check_list(word, l, pos=None):                     # this checks that word a
 	return False
 
 def match_pos(word, pos):
-	if pos == '' or len(word[0].split('_')) > 1:
+	if pos == '' or len(word[0].split(delimiter)) > 1:
 		return True
 	if word[1][:2] == 'NN' and pos == 'n':
 		return True
@@ -90,13 +93,13 @@ def match_pos(word, pos):
 def check_valid(subj_anchor, subj, obj, obj_pos, target_seq, target_string, stopwords):
 	if obj in stopwords or obj == subj or obj == subj_anchor or len(obj) < 3:
 		return False, None
-	if '_' in obj:
-		if obj.replace('_', ' ') in target_string:
+	if delimiter in obj:
+		if obj in target_string:
 			return True, obj
 		else:
-			obj_tokens = obj.split('_')
+			obj_tokens = obj.split(delimiter)
 			matchs, target_word = get_matching_words(obj_tokens, target_seq, target_string, stopwords, subj, subj_anchor)  
-			if float(matchs)/len(obj_tokens) > 0.5:
+			if float(matchs)/len(obj_tokens) > min_overlap:
 				return True, target_word
 	elif check_list(obj, target_seq, pos=obj_pos):
 		return True, obj
@@ -107,10 +110,10 @@ def get_matching_words(obj_tokens, target_seq, target_string, stopwords, subj, s
 	obj_ngrams = get_ngrams(obj_tokens)
 	for gram in obj_ngrams:
 		if gram in target_string:
-			return len(gram.split(' ')), gram
+			return len(gram.split(delimiter)), gram
 	count = 0
 	match = None
-	subj_tokens = subj.split('_')
+	subj_tokens = subj.split(delimiter)
 	for w in obj_tokens:
 		if w not in stopwords and w != subj and w != subj_anchor and w not in subj_tokens and check_list(w, target_seq):
 			count += 1
@@ -162,34 +165,3 @@ def build_trees(en_concepts, long_en_concepts, stopwords, question, options):
 		#print (options_cs[-1])
 		#print ()
 	return options_cs
-
-if __name__ == '__main__':
-	with open('en_concepts.pickle', 'rb') as f:
-		en_concepts = pickle.load(f)
-	with open('long_en_concepts.pickle', 'rb') as f:
-		long_en_concepts = pickle.load(f)
-	train_data = []
-	with open('../CommonsenseQA/train_rand_split.jsonl', 'r') as f:
-		for line in f:
-			train_data.append(json.loads(line))
-	dev_data = []
-	with open('../CommonsenseQA/dev_rand_split.jsonl', 'r') as f:
-		for line in f:
-			dev_data.append(json.loads(line))
-	
-	vocab, stopwords = build_dict(train_data)
-
-	for idx, sample in tqdm.tqdm(enumerate(dev_data)):
-		question = sample['question']['stem'].lower()
-		options_cs = build_trees(en_concepts, long_en_concepts, stopwords, question, [c['text'] for c in sample['question']['choices']])
-		sample['choice_commonsense'] = [[],[],[],[],[]]
-		common_cs = set(options_cs[0]).intersection(set(options_cs[1])).intersection(set(options_cs[2])).intersection(set(options_cs[3])).intersection(set(options_cs[4]))
-		for i, o in enumerate(options_cs):
-			for c in o:
-				if c not in common_cs:
-					sample['choice_commonsense'][i].append(c)
-
-	with open('dev_cs.jsonl', 'w') as fout:
-		for sample in dev_data:
-			json.dump(sample, fout)
-			fout.write('\n')

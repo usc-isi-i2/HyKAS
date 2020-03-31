@@ -45,7 +45,6 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 
 from hykas.utils import myprocessors, accuracy, output_modes, convert_examples_to_features
 from hykas.models import ModelForMCRC, OCNModel
-from hykas.utils_processor import newprocessors, newoutput_modes
 
 import json
 
@@ -484,8 +483,6 @@ def run_hykas(args):
 
 	# Set seed
 	set_seed(args)
-	myprocessors.update(newprocessors)
-	output_modes.update(newoutput_modes)
 	# Prepare GLUE task
 	args.task_name = args.task_name.lower()
 	if args.task_name not in myprocessors:

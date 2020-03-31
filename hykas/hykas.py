@@ -7,7 +7,7 @@ from mowgli.predictor.predictor import Predictor
 #from trian.preprocess_utils import build_vocab
 #from trian.utils import load_vocab, load_data
 #from trian.model import Model
-from hykas.config import AttrDict, model_args as margs, preprocessing_args as pargs
+from hykas.config import get_pp_args, get_model_args
 from hykas.extract_cskg import read_commonsense
 import hykas.utils
 from hykas.preprocess import build_dict, build_trees
@@ -26,12 +26,15 @@ import tqdm
 import pickle
 
 class Hykas(Predictor):
-	def preprocess(self, dataset:Dataset) -> Any:
+	def preprocess(self, dataset:Dataset, kg='conceptnet') -> Any:
 
-		pp_args=AttrDict(pargs)
+		dataname=dataset.name
+		pp_args=get_pp_args(dataname, kg)
 
 		
 		# Preprocess KG
+		# the resulting files are indexed on the label of the edge subject
+		# so the keys are these labels, and the values are lists of tuples that include the predicate and the object
 		if os.path.exists(pp_args.short_concepts_pkl):
 			en_concepts=pickle.load(open(pp_args.short_concepts_pkl, 'rb'))
 			long_en_concepts=pickle.load(open(pp_args.long_concepts_pkl, 'rb'))
@@ -41,37 +44,39 @@ class Hykas(Predictor):
 			hykas.utils.save_dict(pp_args.short_concepts_pkl, en_concepts)
 			hykas.utils.save_dict(pp_args.long_concepts_pkl, long_en_concepts)
 
-
 		# Preprocess dataset
 		train_data = getattr(dataset, 'train')
 		vocab, stopwords = build_dict(train_data)
 
-		dev_data=getattr(dataset, 'dev')
+		print('vocab size:', len(vocab))
+		print(vocab)
+		print('stopwords:', len(stopwords))
+		print(stopwords)
 
-		cs_filter=[]
-		for idx, sample in tqdm.tqdm(enumerate(dev_data)):
-			concept, question=sample.question
-			question=question.lower()
-			options_cs = build_trees(en_concepts, long_en_concepts, stopwords, question, sample.answers) 
-			choice_commonsense = [[],[],[],[],[]]
-			common_cs = set(options_cs[0]).intersection(set(options_cs[1])).intersection(set(options_cs[2])).intersection(set(options_cs[3])).intersection(set(options_cs[4]))
-			for i, o in enumerate(options_cs):
-				for c in o:
-					if c not in common_cs:
-						choice_commonsense[i].append(c)
-			cs_filter.append({'choice_commonsense': choice_commonsense, 'id': sample.id})
 
-		with open(pp_args.cskg_filter, 'w') as fout:
-			for sample in cs_filter:
-				json.dump(sample, fout)
-				fout.write('\n')
-
+		# Lookup the vocabulary in the CSKG to create relevant background knowledge
+		for partition in pp_args.partitions:
+			part_data=getattr(dataset, partition)
+			cs_filter=[]
+			for idx, sample in tqdm.tqdm(enumerate(part_data)):
+				concept, question=sample.question
+				question=question.lower()
+				options_cs = build_trees(en_concepts, long_en_concepts, stopwords, question, sample.answers) 
+				choice_commonsense = [[],[],[],[],[]]
+				common_cs = set(options_cs[0]).intersection(set(options_cs[1])).intersection(set(options_cs[2])).intersection(set(options_cs[3])).intersection(set(options_cs[4]))
+				for i, o in enumerate(options_cs):
+					for c in o:
+						if c not in common_cs:
+							choice_commonsense[i].append(c)
+				cs_filter.append({'choice_commonsense': choice_commonsense, 'id': sample.id})
+			hykas.utils.save_jsonl(pp_args.cskg_filter[partition], cs_filter)
+		exit(0)
 		return dataset
 
 	def train(self, train_data:List, dev_data: List, graph: Any) -> Any:
 
 		exit(0)
-		model_args=AttrDict(margs)
+		model_args=get_model_args(dataname, kg)
 		run_hykas(model_args)
 		"""
 		model_args=AttrDict(margs)
