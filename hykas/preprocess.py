@@ -118,7 +118,7 @@ def get_matching_words(obj_tokens, target_seq, target_string, stopwords, subj, s
 	return count, match
 
 
-def build_trees(en_concetps, long_en_concepts, stopwords, question, options):
+def build_trees(en_concepts, long_en_concepts, stopwords, question, options):
 	#print (question, answer)
 	question_tokens = tokenizer.tokenize(question)
 	question_pos = nltk.pos_tag(question_tokens)

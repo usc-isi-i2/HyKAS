@@ -38,7 +38,6 @@ def read_commonsense(fl):
 		next(f)
 		reader = csv.reader(f, delimiter='\t')
 		for i, line in enumerate(reader):
-			if line[0]=='subject': continue
 			rela=line[1]
 			#rela = '/'.join(line[1].split('/')[2:]) 
 			if rela not in rel_types:
@@ -46,8 +45,12 @@ def read_commonsense(fl):
 
 			start_label=assign_if_exists(node2label, line[0])
 			end_label=assign_if_exists(node2label, line[2])
+			if start_label =='' or end_label=='': continue
+
 			start_sense=assign_if_exists(node2pos, line[0])
 			end_sense=assign_if_exists(node2pos, line[2])
+			if ',' in start_sense: start_sense=''
+			if ',' in end_sense: end_sense=''
 
 			concept_len[len(start_label.split(DELIMITER))] += 1
 			concept_len[len(end_label.split(DELIMITER))] += 1

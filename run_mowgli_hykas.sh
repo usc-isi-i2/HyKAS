@@ -2,8 +2,8 @@
 
 mkdir -p output
 
-rm output/*
-rm checkpoint/*.mdl
+#rm output/*
+#rm checkpoint/*.mdl
 
 cfg="cfg/hykas.yaml"
 

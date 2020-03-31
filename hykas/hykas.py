@@ -11,6 +11,7 @@ from hykas.config import AttrDict, model_args as margs, preprocessing_args as pa
 from hykas.extract_cskg import read_commonsense
 import hykas.utils
 from hykas.preprocess import build_dict, build_trees
+from hykas.run import run_hykas
 
 import copy
 import json
@@ -22,6 +23,7 @@ import random
 import numpy as np
 from datetime import datetime
 import tqdm
+import pickle
 
 class Hykas(Predictor):
 	def preprocess(self, dataset:Dataset) -> Any:
@@ -30,9 +32,15 @@ class Hykas(Predictor):
 
 		
 		# Preprocess KG
-		en_concepts, long_en_concepts = read_commonsense(pp_args.kg_edges)
-		hykas.utils.save_dict(pp_args.short_concepts_pkl, en_concepts)
-		hykas.utils.save_dict(pp_args.long_concepts_pkl, long_en_concepts)
+		if os.path.exists(pp_args.short_concepts_pkl):
+			en_concepts=pickle.load(open(pp_args.short_concepts_pkl, 'rb'))
+			long_en_concepts=pickle.load(open(pp_args.long_concepts_pkl, 'rb'))
+			print(len(en_concepts), 'concepts, ', len(long_en_concepts), 'long concepts.')
+		else:
+			en_concepts, long_en_concepts = read_commonsense(pp_args.kg_edges)
+			hykas.utils.save_dict(pp_args.short_concepts_pkl, en_concepts)
+			hykas.utils.save_dict(pp_args.long_concepts_pkl, long_en_concepts)
+
 
 		# Preprocess dataset
 		train_data = getattr(dataset, 'train')
@@ -44,7 +52,7 @@ class Hykas(Predictor):
 		for idx, sample in tqdm.tqdm(enumerate(dev_data)):
 			concept, question=sample.question
 			question=question.lower()
-			options_cs = build_trees(en_concepts, long_en_concepts, stopwords, question, answers) 
+			options_cs = build_trees(en_concepts, long_en_concepts, stopwords, question, sample.answers) 
 			choice_commonsense = [[],[],[],[],[]]
 			common_cs = set(options_cs[0]).intersection(set(options_cs[1])).intersection(set(options_cs[2])).intersection(set(options_cs[3])).intersection(set(options_cs[4]))
 			for i, o in enumerate(options_cs):
@@ -58,26 +66,13 @@ class Hykas(Predictor):
 				json.dump(sample, fout)
 				fout.write('\n')
 
-		exit(0)
-
-		"""
-		pp_args=AttrDict(pargs)
-		tok = SpacyTokenizer(annotators={'pos', 'lemma', 'ner'})
-		# Build vocabulary
-		build_vocab(dataset, pp_args, tok)
-
-		# Preprocess KG
-		preprocess_cskg(pp_args)
-		print('done preprocessing cskg')
-		
-		# Preprocess datasets
-		preprocess_dataset(dataset, pp_args, tok)
-		"""		
-		# Done
 		return dataset
 
 	def train(self, train_data:List, dev_data: List, graph: Any) -> Any:
 
+		model_args=AttrDict(margs)
+		run_hykas(model_args)
+		"""
 		model_args=AttrDict(margs)
 		pp_args=AttrDict(pargs)
 		print('Model arguments:', model_args)
@@ -134,7 +129,7 @@ class Hykas(Predictor):
 			print('Epoch %d use %d seconds.' % (i, time.time() - start_time))
 
 		print('Best dev accuracy: %f' % best_dev_acc)
-
+		"""
 		return model
 
 	def predict(self, model: Any, dataset: Dataset, partition: str) -> List:
