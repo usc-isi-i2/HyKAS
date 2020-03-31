@@ -70,6 +70,7 @@ class Hykas(Predictor):
 
 	def train(self, train_data:List, dev_data: List, graph: Any) -> Any:
 
+		exit(0)
 		model_args=AttrDict(margs)
 		run_hykas(model_args)
 		"""

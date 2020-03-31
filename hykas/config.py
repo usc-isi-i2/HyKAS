@@ -1,11 +1,14 @@
 
+kg='cskg'
+dataset='csqa'
+
 model_args={
-			'data_dir': './data',
+			'data_dir': './data/%s' % kg,
 			'model_type': 'roberta-ocn-inj',
 			'model_name_or_path': 'roberta-large',
-			'task_name': 'csqa-inj',
+			'task_name': '%s-inj' % dataset,
 			'overwrite_output_dir': True,
-			'output_dir': './output',
+			'output_dir': './output/%s-%s' % (kg, dataset),
 			'config_name': '',
 			'tokenizer_name': '',
 			'cache_dir': 'downloaded_models',
@@ -45,10 +48,10 @@ model_args={
 
 
 preprocessing_args={
-			'kg_edges': './data/cskg/edges_v004.csv',
-			'short_concepts_pkl': './output/en_concepts.pickle',
-            'long_concepts_pkl': './output/long_en_concepts.pickle',
-			'cskg_filter': './output/cskg.filter',
+			'kg_edges': './data/%s/edges_v004.csv' % kg,
+			'short_concepts_pkl': './output/%s-%s/en_concepts.pickle' % (kg, dataset),
+            'long_concepts_pkl': './output/%s-%s/long_en_concepts.pickle' % (kg, dataset),
+			'cskg_filter': './output/%s-%s/cskg.filter' % (kg, dataset),
 			'partitions': ['train', 'dev']
 			}
 

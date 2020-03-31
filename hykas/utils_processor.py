@@ -4,7 +4,7 @@ import logging
 import numpy as np
 from hykas.commonsense_mapping import COMMONSENSE_MAPPING
 from collections import Counter
-from utils import DataProcessor, InputExample, answerKey_mapping
+from hykas.utils import DataProcessor, InputExample, answerKey_mapping
 import csv
 
 logger = logging.getLogger(__name__)
