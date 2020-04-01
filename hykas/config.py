@@ -1,12 +1,14 @@
 from attrdict import AttrDict
 
+kg_name='conceptnet'
+
 def get_model_args(dataset, kg='conceptnet'):
 
 	model_args={
 				'data_dir': './data/%s' % kg,
 				'model_type': 'roberta-ocn-inj',
 				'model_name_or_path': 'roberta-large',
-				'task_name': '%s-inj' % dataset,
+				'task_name': 'inj', # % dataset,
 				'overwrite_output_dir': True,
 				'output_dir': './output/%s-%s' % (kg, dataset),
 				'config_name': '',
@@ -52,8 +54,8 @@ def get_pp_args(dataset, kg='conceptnet'):
 			'kg_edges': './data/%s/edges_v004.csv' % kg,
 			'short_concepts_pkl': './output/%s-%s/en_concepts.pickle' % (kg, dataset),
             'long_concepts_pkl': './output/%s-%s/long_en_concepts.pickle' % (kg, dataset),
-			'cskg_filter': {'train': './output/%s-%s/cskg.filter.train' % (kg, dataset), 
-							'dev': './output/%s-%s/cskg.filter.dev' % (kg, dataset)},
+			'cskg_filter': {'train': './output/%s-%s/%s.filter.train' % (kg, dataset, kg), 
+							'dev': './output/%s-%s/%s.filter.dev' % (kg, dataset, kg)},
 			'partitions': ['train', 'dev']
 			}
 	return AttrDict(preprocessing_args)

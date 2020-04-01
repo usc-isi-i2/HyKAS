@@ -7,7 +7,7 @@ from mowgli.predictor.predictor import Predictor
 #from trian.preprocess_utils import build_vocab
 #from trian.utils import load_vocab, load_data
 #from trian.model import Model
-from hykas.config import get_pp_args, get_model_args
+from hykas.config import get_pp_args, get_model_args, kg_name
 from hykas.extract_cskg import read_commonsense
 import hykas.utils
 from hykas.preprocess import build_dict, build_trees
@@ -28,6 +28,9 @@ import pickle
 class Hykas(Predictor):
 	def preprocess(self, dataset:Dataset, kg='conceptnet') -> Any:
 
+
+		kg=kg_name
+		global dataname
 		dataname=dataset.name
 		pp_args=get_pp_args(dataname, kg)
 
@@ -63,79 +66,28 @@ class Hykas(Predictor):
 				question=question.lower()
 				options_cs = build_trees(en_concepts, long_en_concepts, stopwords, question, sample.answers) 
 				choice_commonsense = [[],[],[],[],[]]
-				common_cs = set(options_cs[0]).intersection(set(options_cs[1])).intersection(set(options_cs[2])).intersection(set(options_cs[3])).intersection(set(options_cs[4]))
+				common_cs = set(options_cs[0]).intersection(*options_cs)
 				for i, o in enumerate(options_cs):
 					for c in o:
 						if c not in common_cs:
 							choice_commonsense[i].append(c)
 				cs_filter.append({'choice_commonsense': choice_commonsense, 'id': sample.id})
 			hykas.utils.save_jsonl(pp_args.cskg_filter[partition], cs_filter)
-		exit(0)
 		return dataset
 
 	def train(self, train_data:List, dev_data: List, graph: Any) -> Any:
 
-		exit(0)
+		kg=kg_name
 		model_args=get_model_args(dataname, kg)
-		run_hykas(model_args)
-		"""
-		model_args=AttrDict(margs)
-		pp_args=AttrDict(pargs)
-		print('Model arguments:', model_args)
-		if model_args.pretrained:
-			assert all(os.path.exists(p) for p in model_args.pretrained.split(',')), 'Checkpoint %s does not exist.' % model_args.pretrained
-
-		train_data = load_data(pp_args.processed_file % 'train')
-		train_data += load_data(pp_args.processed_file % 'trial')
-		dev_data = load_data(pp_args.processed_file % 'dev') 
-
-		load_vocab(pp_args, train_data+dev_data)
-
-		torch.manual_seed(model_args.seed)
-		np.random.seed(model_args.seed)
-		random.seed(model_args.seed)
-
-		best_model=None
-
-		if model_args.test_mode:
-			# use validation data as training data
-			train_data += dev_data
-			dev_data = []
-		model = Model(model_args)
-
-		best_dev_acc = 0.0
-		os.makedirs(model_args.checkpoint_dir, exist_ok=True)
-		checkpoint_path = '%s/%d-%s.mdl' % (model_args.checkpoint_dir, model_args.seed, datetime.now().isoformat())
-		print('Trained model will be saved to %s' % checkpoint_path)
-		for i in range(model_args.epoch):
-			print('Epoch %d...' % i)
-			if i == 0:
-				print('Dev data size', len(dev_data))
-				dev_acc, dev_preds, dev_probs = model.evaluate(dev_data)
-				print('Dev accuracy: %f' % dev_acc)
-			start_time = time.time()
-			np.random.shuffle(train_data)
-			cur_train_data = train_data
+		pp_args=get_pp_args(dataname, kg)
 		
-			model.train(cur_train_data)
-			train2000=train_data[:2000]
-			train_acc, *rest = model.evaluate(train2000, debug=False, eval_train=True)
-			print('Train accuracy: %f' % train_acc)
-			dev_acc, dev_preds, dev_probs = model.evaluate(dev_data, debug=True)
-			print('Dev accuracy: %f' % dev_acc)
+		commonsense={}
+		for part in pp_args.partitions:
+			with open(pp_args.cskg_filter[part], 'r') as f:
+				commonsense[part]=f.split('\n')
+			
 
-			if dev_acc > best_dev_acc:
-				best_dev_acc = dev_acc
-				os.system('mv %s %s ' % (model_args.last_log, model_args.best_log))
-				model.save(checkpoint_path)
-				#best_model = Model(model_args)
-				#best_model.network.load_state_dict(copy.deepcopy(model.network.state_dict()))
-			elif model_args.test_mode:
-				model.save(checkpoint_path)
-			print('Epoch %d use %d seconds.' % (i, time.time() - start_time))
-
-		print('Best dev accuracy: %f' % best_dev_acc)
-		"""
+		run_hykas(model_args, train_data, dev_data, commonsense)
 		return model
 
 	def predict(self, model: Any, dataset: Dataset, partition: str) -> List:

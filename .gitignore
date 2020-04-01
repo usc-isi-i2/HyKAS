@@ -1,2 +1,3 @@
-data/cskg/
+data/
+output/
 __pycache__/

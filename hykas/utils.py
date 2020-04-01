@@ -210,27 +210,25 @@ class DataProcessor(object):
 				lines.append(line)
 			return lines
 
-class CommonsenseqaProcessor(DataProcessor):
-	def __init__(self, data_dir):
+class QAProcessor(DataProcessor):
+	def __init__(self, train_data, dev_data, cs_data): 
 		self.D = [[], [], []]
-		for sid in range(2):
-			with open([os.path.join(data_dir, "train_rand_split.jsonl"), os.path.join(data_dir, "dev_rand_split.jsonl")][sid], "r") as f:
-				data = []
-				for line in f:
-					data.append(json.loads(line))
-				for i in range(len(data)):
-					d = ['Q: ' + data[i]["question"]['stem']]
-					for k in range(len(data[i]['question']["choices"])):
-						d += ['A: ' + data[i]['question']["choices"][k]['text']]
-					d += [answerKey_mapping[data[i]["answerKey"]]] 
-					self.D[sid] += [d]
+        for sid, data in enumerate([train_data, dev_data]):
+            for entry in data: #range(len(data)):
+				context, question=entry.question
+				d = ['Q: ' + question] 
+				for i, answer in enumerate(entry.answers):
+					d += ['A: ' + answer]
+
+				d += [str(entry.correct_answer)] 
+				self.D[sid] += [d]
 		
-	def get_train_examples(self, data_dir):
+	def get_train_examples(self):
 		"""See base class."""
 		return self._create_examples(
 				self.D[0], "train")
 
-	def get_dev_examples(self, data_dir):
+	def get_dev_examples(self):
 		"""See base class."""
 		return self._create_examples(
 				self.D[1], "dev")
@@ -242,42 +240,42 @@ class CommonsenseqaProcessor(DataProcessor):
 	def _create_examples(self, data, set_type):
 		"""Creates examples for the training and dev sets."""
 		examples = []
-		for (i, d) in enumerate(data):
-			answer = str(data[i][-1])		
+		for i, d in enumerate(data):
+			answer = str(d[-1])		
 
 			for k in range(5):
 				guid = "%s-%s-%s" % (set_type, i, k)
-				text_b = data[i][k+1]
-				text_a = data[i][0]
+				text_b = d[k+1]
+				text_a = d[0]
 				examples.append(
 						InputExample(guid=guid, text_a=text_a, text_b=text_b, label=answer))
 			
 		return examples
 
-class CommonsenseqaInjProcessor(DataProcessor):
-	def __init__(self, data_dir):
+class QAInjProcessor(DataProcessor):
+	def __init__(self, train_data, dev_data, cs_data):
 		self.D = [[], [], []]
 		len_dict = Counter()
-		for sid in range(2):
-			with open([os.path.join(data_dir, "train_cs.jsonl"), os.path.join(data_dir, "dev_cs.jsonl")][sid], "r") as f:
-				data = []
-				for line in f:
-					data.append(json.loads(line))
-				for i in range(len(data)):
-					d = [data[i]['id'], 'Q: ' + data[i]["question"]['stem']]
-					for k in range(len(data[i]['question']["choices"])):
-						d += ['A: ' + data[i]['question']["choices"][k]['text']]
-						d += [data[i]['choice_commonsense'][k]]
-						len_dict[len(d[-1])] += 1
-					d += [answerKey_mapping[data[i]["answerKey"]]] 
-					self.D[sid] += [d]
+		for sid, data in enumerate([train_data, dev_data]):
+			for entry in data: #range(len(data)):
+				context, question=entry.question
+				d = [entry.id, 'Q: ' + question]
+				for i, answer in enumerate(entry.answers):
+					d += ['A: ' + answer]
+					if sid==0:
+						d+=[json.loads(cs_data['train'][i])]
+					else:
+						d+=[json.loads(cs_data['dev'][i])]
+					len_dict[len(d[-1])] += 1
+				d += [str(entry.correct_answer)] 
+				self.D[sid] += [d]
 		
-	def get_train_examples(self, data_dir):
+	def get_train_examples(self):
 		"""See base class."""
 		return self._create_examples(
 				self.D[0], "train")
-
-	def get_test_examples(self, data_dir):
+	"""
+	def get_test_examples(self, data):
 		"""See base class."""
 		examples = []
 		with open(os.path.join(data_dir, "test_cs.jsonl"), 'r') as f:
@@ -291,8 +289,9 @@ class CommonsenseqaInjProcessor(DataProcessor):
 					candidate = 'A: '+data[i]['question']['choices'][k]['text']
 					examples.append(InputExample(guid=guid, text_a=question, text_b=candidate, concepts=data[i]['choice_commonsense'][k])) 
 		return examples
+	"""
 
-	def get_dev_examples(self, data_dir):
+	def get_dev_examples(self): 
 		"""See base class."""
 		return self._create_examples(
 				self.D[1], "dev")
@@ -304,24 +303,24 @@ class CommonsenseqaInjProcessor(DataProcessor):
 	def _create_examples(self, data, set_type):
 		"""Creates examples for the training and dev sets."""
 		examples = []
-		for (i, d) in enumerate(data):
-			answer = str(data[i][-1])		
+		for i, d in enumerate(data):
+			answer = str(d[-1])		
 
 			for k in range(5):
-				guid = "%s-%s" % (data[i][0], k)
-				text_b = data[i][k*2+2]
-				text_a = data[i][1]
+				guid = "%s-%s" % (d[0], k)
+				text_b = d[k*2+2]
+				text_a = d[1]
 				examples.append(
-						InputExample(guid=guid, text_a=text_a, text_b=text_b, concepts=data[i][k*2+3], label=answer))
+						InputExample(guid=guid, text_a=text_a, text_b=text_b, concepts=d[k*2+3], label=answer))
 			
 		return examples
 
 myprocessors = {
-	"csqa": CommonsenseqaProcessor,
-	"csqa-inj": CommonsenseqaInjProcessor
+	"qa": QAProcessor,
+	"qa-inj": QAInjProcessor
 }
 
 output_modes = {
-	"csqa": "classification",
-	"csqa-inj": "classification"
+	"qa": "classification",
+	"qa-inj": "classification"
 }

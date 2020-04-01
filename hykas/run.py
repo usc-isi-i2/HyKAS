@@ -445,7 +445,7 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
 
 	return MyDataset(features, pad_on_left, pad_token, pad_token_segment_id, cls_token, sep_token, len(label_list))
 
-def run_hykas(args):
+def run_hykas(args, train_data, dev_data, cs_data):
 
 	if os.path.exists(args.output_dir) and os.listdir(args.output_dir) and args.do_train and not args.overwrite_output_dir:
 		raise ValueError("Output directory ({}) already exists and is not empty. Use --overwrite_output_dir to overcome.".format(args.output_dir))
@@ -487,7 +487,7 @@ def run_hykas(args):
 	args.task_name = args.task_name.lower()
 	if args.task_name not in myprocessors:
 		raise ValueError("Task not found: %s" % (args.task_name))
-	processor = myprocessors[args.task_name](args.data_dir)
+	processor = myprocessors[args.task_name](train_data, dev_data, cs_data)
 	args.output_mode = output_modes[args.task_name]
 	label_list = processor.get_labels()
 	num_labels = len(label_list)
