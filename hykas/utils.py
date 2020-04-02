@@ -213,8 +213,8 @@ class DataProcessor(object):
 class QAProcessor(DataProcessor):
 	def __init__(self, train_data, dev_data, cs_data): 
 		self.D = [[], [], []]
-        for sid, data in enumerate([train_data, dev_data]):
-            for entry in data: #range(len(data)):
+		for sid, data in enumerate([train_data, dev_data]):
+			for entry in data: #range(len(data)):
 				context, question=entry.question
 				d = ['Q: ' + question] 
 				for i, answer in enumerate(entry.answers):
@@ -222,6 +222,7 @@ class QAProcessor(DataProcessor):
 
 				d += [str(entry.correct_answer)] 
 				self.D[sid] += [d]
+		self.num_answers=len(entry.answers)
 		
 	def get_train_examples(self):
 		"""See base class."""
@@ -233,9 +234,10 @@ class QAProcessor(DataProcessor):
 		return self._create_examples(
 				self.D[1], "dev")
 
-	def get_labels(self):
+	def get_labels(self, data):
 		"""See base class."""
-		return ["0", "1", "2", "3", "4"]
+		lbl=[str(x) for x in range(self.num_answers)]
+		return lbl
 
 	def _create_examples(self, data, set_type):
 		"""Creates examples for the training and dev sets."""
@@ -243,7 +245,7 @@ class QAProcessor(DataProcessor):
 		for i, d in enumerate(data):
 			answer = str(d[-1])		
 
-			for k in range(5):
+			for k in range(self.num_answers):
 				guid = "%s-%s-%s" % (set_type, i, k)
 				text_b = d[k+1]
 				text_a = d[0]
@@ -257,39 +259,44 @@ class QAInjProcessor(DataProcessor):
 		self.D = [[], [], []]
 		len_dict = Counter()
 		for sid, data in enumerate([train_data, dev_data]):
-			for entry in data: #range(len(data)):
+			for ne, entry in enumerate(data): #range(len(data)):
 				context, question=entry.question
 				d = [entry.id, 'Q: ' + question]
+
+				if sid==0:
+					entry_cs=json.loads(cs_data['train'][ne])['choice_commonsense']
+				else:
+					entry_cs=json.loads(cs_data['dev'][ne])['choice_commonsense']
 				for i, answer in enumerate(entry.answers):
 					d += ['A: ' + answer]
-					if sid==0:
-						d+=[json.loads(cs_data['train'][i])]
-					else:
-						d+=[json.loads(cs_data['dev'][i])]
+					d+=[entry_cs[i]]
 					len_dict[len(d[-1])] += 1
 				d += [str(entry.correct_answer)] 
 				self.D[sid] += [d]
+		self.num_answers=len(entry.answers)
 		
 	def get_train_examples(self):
 		"""See base class."""
 		return self._create_examples(
 				self.D[0], "train")
-	"""
-	def get_test_examples(self, data):
-		"""See base class."""
-		examples = []
-		with open(os.path.join(data_dir, "test_cs.jsonl"), 'r') as f:
-			data = []
-			for line in f:
-				data.append(json.loads(line))
-			for i in range(len(data)):
-				question = 'Q: ' + data[i]['question']['stem']
-				for k in range(5):
-					guid = "%s-%s-%s" % ('test', i, k)
-					candidate = 'A: '+data[i]['question']['choices'][k]['text']
-					examples.append(InputExample(guid=guid, text_a=question, text_b=candidate, concepts=data[i]['choice_commonsense'][k])) 
-		return examples
-	"""
+	
+#	def get_test_examples(self, data):
+#		"""
+#		See base class.
+#		"""
+#		examples = []
+#		with open(os.path.join(data_dir, "test_cs.jsonl"), 'r') as f:
+#			data = []
+#			for line in f:
+#				data.append(json.loads(line))
+#			for i in range(len(data)):
+#				question = 'Q: ' + data[i]['question']['stem']
+#				for k in range(5):
+#					guid = "%s-%s-%s" % ('test', i, k)
+#					candidate = 'A: '+data[i]['question']['choices'][k]['text']
+#					examples.append(InputExample(guid=guid, text_a=question, text_b=candidate, concepts=data[i]['choice_commonsense'][k])) 
+#		return examples
+	
 
 	def get_dev_examples(self): 
 		"""See base class."""
@@ -298,7 +305,8 @@ class QAInjProcessor(DataProcessor):
 
 	def get_labels(self):
 		"""See base class."""
-		return ["0", "1", "2", "3", "4"]
+		lbl=[str(x) for x in range(self.num_answers)]
+		return lbl
 
 	def _create_examples(self, data, set_type):
 		"""Creates examples for the training and dev sets."""
@@ -306,7 +314,7 @@ class QAInjProcessor(DataProcessor):
 		for i, d in enumerate(data):
 			answer = str(d[-1])		
 
-			for k in range(5):
+			for k in range(self.num_answers):
 				guid = "%s-%s" % (d[0], k)
 				text_b = d[k*2+2]
 				text_a = d[1]

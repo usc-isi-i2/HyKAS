@@ -2,14 +2,13 @@
 
 mkdir -p output
 
-#rm output/*
-#rm checkpoint/*.mdl
+rm output/conceptnet-csqa/*
 
 cfg="cfg/hykas.yaml"
 
 #datasets="hellaswag-train-dev" #"alphanli" #"physicaliqa-train-dev" # "socialiqa-train-dev"
-datasets="se2018t11"
-#datasets="csqa"
+#datasets="se2018t11"
+datasets="csqa"
 
 for dataset in $datasets 
 do

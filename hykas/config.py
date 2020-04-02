@@ -5,10 +5,9 @@ kg_name='conceptnet'
 def get_model_args(dataset, kg='conceptnet'):
 
 	model_args={
-				'data_dir': './data/%s' % kg,
 				'model_type': 'roberta-ocn-inj',
 				'model_name_or_path': 'roberta-large',
-				'task_name': 'inj', # % dataset,
+				'task_name': 'qa-inj', # % dataset,
 				'overwrite_output_dir': True,
 				'output_dir': './output/%s-%s' % (kg, dataset),
 				'config_name': '',

@@ -5,4 +5,4 @@ predictor:
 # Settings
 evaluate_training: false
 store_predictions: true
-datarows: 10
+datarows: 10000000

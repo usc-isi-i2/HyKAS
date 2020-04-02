@@ -75,7 +75,7 @@ def set_seed(args):
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-def train(args, train_dataset, model, tokenizer):
+def train(args, train_dataset, model, tokenizer, train_data, dev_data, cs_data):
 	""" Train the model """
 	if args.local_rank in [-1, 0]:
 		tb_writer = SummaryWriter(os.path.join('runs', args.output_dir.split('/')[-1]))
@@ -114,6 +114,7 @@ def train(args, train_dataset, model, tokenizer):
 
 	# multi-gpu training (should be after apex fp16 initialization)
 	if args.n_gpu > 1 and args.split_model_at == -1:
+		print('parallelizing with', args.n_gpu)
 		model = torch.nn.DataParallel(model)
 
 	# Distributed training (should be after apex fp16 initialization)
@@ -203,7 +204,7 @@ def train(args, train_dataset, model, tokenizer):
 		logger.info("Training acc = %s", str(tr_acc['acc']))
 		tb_writer.add_scalar('train_acc', tr_acc['acc'], global_step)
 		if args.local_rank == -1 and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
-			results = evaluate(args, model, tokenizer)
+			results = evaluate(args, model, tokenizer, train_data, dev_data, cs_data)
 			for key, value in results.items():
 				tb_writer.add_scalar('eval_{}'.format(key), value, global_step)
 			if results['acc'] > curr_best:
@@ -232,14 +233,14 @@ def save_logits(logits_all, filename):
 					f.write(" ")
 
 
-def evaluate(args, model, tokenizer, prefix=""):
+def evaluate(args, model, tokenizer, train_data, dev_data, cs_data, prefix=""):
 	# Loop to handle MNLI double evaluation (matched, mis-matched)
 	eval_task_names = ("mnli", "mnli-mm") if args.task_name == "mnli" else (args.task_name,)
 	eval_outputs_dirs = (args.output_dir, args.output_dir + '-MM') if args.task_name == "mnli" else (args.output_dir,)
 
 	results = {}
 	for eval_task, eval_output_dir in zip(eval_task_names, eval_outputs_dirs):
-		eval_dataset = load_and_cache_examples(args, eval_task, tokenizer, evaluate=True)
+		eval_dataset = load_and_cache_examples(args, eval_task, tokenizer, train_data, dev_data, cs_data, evaluate=True)
 
 		if not os.path.exists(eval_output_dir) and args.local_rank in [-1, 0]:
 			os.makedirs(eval_output_dir)
@@ -375,6 +376,7 @@ def mCollateFn(batch):
 	batch_commonsense_mask = []
 	batch_commonsense_mask_full = []
 	pad_on_left, pad_token, pad_seg_id, cls_token, sep_token, num_cand = batch[0][1:]
+	device=torch.device('cpu')
 	if pad_on_left:
 		print ('this needs pad on left')
 		exit(0)
@@ -400,33 +402,33 @@ def mCollateFn(batch):
 	if len(batch_commonsense_ids) == 0:
 		batch_commonsense_ids, batch_commonsense_mask_full, batch_commonsense_mask = None, None, None
 	else:
-		batch_commonsense_ids = torch.tensor(batch_commonsense_ids, dtype=torch.long).cuda()
-		batch_commonsense_mask_full = torch.tensor(batch_commonsense_mask_full, dtype=torch.long).cuda()
-		batch_commonsense_mask = torch.tensor(batch_commonsense_mask, dtype=torch.long).cuda()
-	batch_input_ids = torch.tensor(batch_input_ids, dtype=torch.long).cuda()
-	batch_input_mask = torch.tensor(batch_input_mask, dtype=torch.long).cuda()
-	batch_token_type_ids = torch.tensor(batch_token_type_ids, dtype=torch.long).cuda()
+		batch_commonsense_ids = torch.tensor(batch_commonsense_ids, dtype=torch.long).to(device)
+		batch_commonsense_mask_full = torch.tensor(batch_commonsense_mask_full, dtype=torch.long).to(device)
+		batch_commonsense_mask = torch.tensor(batch_commonsense_mask, dtype=torch.long).to(device)
+	batch_input_ids = torch.tensor(batch_input_ids, dtype=torch.long).to(device)
+	batch_input_mask = torch.tensor(batch_input_mask, dtype=torch.long).to(device)
+	batch_token_type_ids = torch.tensor(batch_token_type_ids, dtype=torch.long).to(device)
 	if batch_label_ids[0] != None:
-		batch_label_ids = torch.tensor(batch_label_ids, dtype=torch.long).cuda()
+		batch_label_ids = torch.tensor(batch_label_ids, dtype=torch.long).to(device)
 	else:
 		batch_label_ids = None
+
 	return batch_sample_ids, batch_input_ids, batch_input_mask, batch_token_type_ids, batch_label_ids, batch_commonsense_ids, batch_commonsense_mask, batch_commonsense_mask_full
 
-def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
+def load_and_cache_examples(args, task, tokenizer, train_data, dev_data, cs_data, evaluate=False, test=False):
 	if args.local_rank not in [-1, 0] and not evaluate:
 		torch.distributed.barrier()  # Make sure only the first process in distributed training process the dataset, and the others will use the cache
 
-	processor = myprocessors[task](args.data_dir)
+	processor = myprocessors[task](train_data, dev_data, cs_data)
 	output_mode = output_modes[task]
-	logger.info("Creating features from dataset file at %s", args.data_dir)
 	label_list = processor.get_labels()
 	if task in ['mnli', 'mnli-mm'] and args.model_type in ['roberta']:
 		# HACK(label indices are swapped in RoBERTa pretrained model)
 		label_list[1], label_list[2] = label_list[2], label_list[1] 
 	if test:
-		examples = processor.get_test_examples(args.data_dir)
+		examples = processor.get_test_examples() 
 	else:
-		examples = processor.get_dev_examples(args.data_dir) if evaluate else processor.get_train_examples(args.data_dir)
+		examples = processor.get_dev_examples() if evaluate else processor.get_train_examples()
 	pad_on_left = bool(args.model_type in ['xlnet'])
 	pad_token = tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0]
 	pad_token_segment_id = 4 if args.model_type in ['xlnet'] else 0
@@ -521,8 +523,8 @@ def run_hykas(args, train_data, dev_data, cs_data):
 
 	# Training
 	if args.do_train:
-		train_dataset = load_and_cache_examples(args, args.task_name, tokenizer, evaluate=False)
-		global_step, tr_loss = train(args, train_dataset, model, tokenizer)
+		train_dataset = load_and_cache_examples(args, args.task_name, tokenizer, train_data, dev_data, cs_data, evaluate=False)
+		global_step, tr_loss = train(args, train_dataset, model, tokenizer, train_data, dev_data, cs_data)
 		logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
 
 
@@ -547,8 +549,8 @@ def run_hykas(args, train_data, dev_data, cs_data):
 			if args.test:
 				result = predict(args, model, tokenizer, prefix=global_step)
 			else:
-				result = evaluate(args, model, tokenizer, prefix=global_step)
+				result = evaluate(args, model, tokenizer, train_data, dev_data, cs_data, prefix=global_step)
 			result = dict((k + '_{}'.format(global_step), v) for k, v in result.items())
 			results.update(result)
 
-	return results
+	return model, results

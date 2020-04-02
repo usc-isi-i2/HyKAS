@@ -48,7 +48,6 @@ def addedge(graph, start, end, full_start, full_end, rel):
 	found = 0
 	for edge in graph:
 		if edge.start == start and edge.end == end:
-			
 			edge.add_relation(full_start, full_end, rel)
 			found = 1
 			break
@@ -132,7 +131,6 @@ def build_trees(en_concepts, long_en_concepts, stopwords, question, options):
 		option_tokens = tokenizer.tokenize(op)
 		option_pos = nltk.pos_tag(option_tokens)
 		option_pos = list(set(option_pos))
-		#print (op)
 		for word in question_pos:
 			if word[0] not in stopwords and word[1][:2] in allowed_pos and word[0] in en_concepts:
 				for rel in en_concepts[word[0]]:
@@ -162,6 +160,5 @@ def build_trees(en_concepts, long_en_concepts, stopwords, question, options):
 							if in_context:
 								addedge(graph, word, match_obj, phrase, rel[2], rel)
 		options_cs.append(list(set([v.get_relation() for v in graph])))
-		#print (options_cs[-1])
 		#print ()
 	return options_cs

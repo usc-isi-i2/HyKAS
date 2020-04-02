@@ -84,10 +84,11 @@ class Hykas(Predictor):
 		commonsense={}
 		for part in pp_args.partitions:
 			with open(pp_args.cskg_filter[part], 'r') as f:
-				commonsense[part]=f.split('\n')
+				commonsense[part]=f.readlines()
 			
 
-		run_hykas(model_args, train_data, dev_data, commonsense)
+		model, results=run_hykas(model_args, train_data, dev_data, commonsense)
+		print(results)
 		return model
 
 	def predict(self, model: Any, dataset: Dataset, partition: str) -> List:

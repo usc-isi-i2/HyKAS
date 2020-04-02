@@ -25,6 +25,12 @@ def assign_if_exists(d, entry):
 	else:
 		return ''
 
+def normalize_rel(r):
+	if r.startswith('/r/'):
+		return r[3:]
+	else:
+		return ':'.join(r.split(':')[1:])
+
 def read_commonsense(fl):
 	en_concepts = {}
 	rel_types = {}
@@ -35,10 +41,11 @@ def read_commonsense(fl):
 	nodes_path=fl.replace('edges', 'nodes')
 	node2label, node2pos=extract_node_data(nodes_path)
 	with open(fl, 'r') as f:
-		next(f)
 		reader = csv.reader(f, delimiter='\t')
+		header=next(reader, None)
+		weight_index=header.index('weight')
 		for i, line in enumerate(reader):
-			rela=line[1]
+			rela=normalize_rel(line[1])
 			#rela = '/'.join(line[1].split('/')[2:]) 
 			if rela not in rel_types:
 				rel_types[rela] = 1
@@ -62,7 +69,7 @@ def read_commonsense(fl):
 				word_pos[end_sense] = 1
 
 			#meta = json.loads(line[-1])
-			concept = (start_sense, rela, end_label, end_sense, float(line[3])) # meta['weight'])
+			concept = (start_sense, rela, end_label, end_sense, float(line[weight_index])) # meta['weight'])
 			if len(start_label.split(DELIMITER)) > 1:
 				for w in start_label.split(DELIMITER):
 					if w not in long_en_concepts:
@@ -81,7 +88,7 @@ def read_commonsense(fl):
 	print ('one word concepts', len(en_concepts))
 	print ('long concepts', len(long_en_concepts))
 	print ('pos', word_pos)
-	#print (rel_types)
+	print ('rel types', rel_types)
 	#print (concept_len)
 	return en_concepts, long_en_concepts
 
