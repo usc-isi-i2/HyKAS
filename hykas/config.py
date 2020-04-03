@@ -35,7 +35,7 @@ def get_model_args(dataset, kg='conceptnet'):
 				'logging_steps': 50,
 				'save_steps': 50,
 				'eval_all_checkpoints': False,
-				'no_cuda': True,
+				'no_cuda': False, #True,
 				'overwrite_cache': False,
 				'seed': 2555,
 				'split_model_at': -1,

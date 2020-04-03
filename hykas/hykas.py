@@ -2,11 +2,6 @@ from mowgli.classes import Dataset, Entry
 import mowgli.utils.general as utils
 from mowgli.predictor.predictor import Predictor
 
-#from trian.trian_classes import SpacyTokenizer
-#from trian.preprocess_utils import preprocess_dataset, preprocess_cskg
-#from trian.preprocess_utils import build_vocab
-#from trian.utils import load_vocab, load_data
-#from trian.model import Model
 from hykas.config import get_pp_args, get_model_args, kg_name
 from hykas.extract_cskg import read_commonsense
 import hykas.utils
@@ -26,14 +21,12 @@ import tqdm
 import pickle
 
 class Hykas(Predictor):
-	def preprocess(self, dataset:Dataset, kg='conceptnet') -> Any:
+	def preprocess(self, dataset:Dataset, config:Any) -> Any:
 
 
-		kg=kg_name
-		global dataname
-		dataname=dataset.name
+		kg=config['kg']
+		dataname=config['dataset']
 		pp_args=get_pp_args(dataname, kg)
-
 		
 		# Preprocess KG
 		# the resulting files are indexed on the label of the edge subject
@@ -75,30 +68,29 @@ class Hykas(Predictor):
 			hykas.utils.save_jsonl(pp_args.cskg_filter[partition], cs_filter)
 		return dataset
 
-	def train(self, train_data:List, dev_data: List, graph: Any) -> Any:
-
-		kg=kg_name
+	def train(self, dataset:Dataset, config:Any) -> Any:
+		kg=config['kg']     
+		dataname=config['dataset']
 		model_args=get_model_args(dataname, kg)
 		pp_args=get_pp_args(dataname, kg)
-		
+
 		commonsense={}
 		for part in pp_args.partitions:
 			with open(pp_args.cskg_filter[part], 'r') as f:
 				commonsense[part]=f.readlines()
 			
+		train_data=getattr(dataset, 'train')
+		dev_data=getattr(dataset, 'dev')
 
 		model, results=run_hykas(model_args, train_data, dev_data, commonsense)
-		print(results)
 		return model
 
-	def predict(self, model: Any, dataset: Dataset, partition: str) -> List:
+	def predict(self, model: Any, dataset: Dataset, config:Any, partition: str) -> List:
+		kg=config['kg']
+		dataname=config['dataset']
+		pp_args=get_pp_args(dataname, kg)
+		exit(0)
+#		dev_acc, dev_preds, dev_probs = model.evaluate(dev_data)
+#		print('Predict fn: Dev accuracy: %f' % dev_acc)
 
-		pp_args=AttrDict(pargs)
-		dev_data = load_data(pp_args.processed_file % partition)
-
-		dev_acc, dev_preds, dev_probs = model.evaluate(dev_data)
-		print('Predict fn: Dev accuracy: %f' % dev_acc)
-
-		#print(dev_preds)
-		#print(dev_probs)
-		return dev_preds, dev_probs
+#		return dev_preds, dev_probs

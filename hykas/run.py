@@ -69,6 +69,7 @@ def set_seed(args):
 	random.seed(args.seed)
 	np.random.seed(args.seed)
 	torch.manual_seed(args.seed)
+	print('n_gpu', args.n_gpu)
 	if args.n_gpu > 0:
 		torch.cuda.manual_seed_all(args.seed)
 
@@ -376,7 +377,6 @@ def mCollateFn(batch):
 	batch_commonsense_mask = []
 	batch_commonsense_mask_full = []
 	pad_on_left, pad_token, pad_seg_id, cls_token, sep_token, num_cand = batch[0][1:]
-	device=torch.device('cpu')
 	if pad_on_left:
 		print ('this needs pad on left')
 		exit(0)
@@ -402,14 +402,14 @@ def mCollateFn(batch):
 	if len(batch_commonsense_ids) == 0:
 		batch_commonsense_ids, batch_commonsense_mask_full, batch_commonsense_mask = None, None, None
 	else:
-		batch_commonsense_ids = torch.tensor(batch_commonsense_ids, dtype=torch.long).to(device)
-		batch_commonsense_mask_full = torch.tensor(batch_commonsense_mask_full, dtype=torch.long).to(device)
-		batch_commonsense_mask = torch.tensor(batch_commonsense_mask, dtype=torch.long).to(device)
-	batch_input_ids = torch.tensor(batch_input_ids, dtype=torch.long).to(device)
-	batch_input_mask = torch.tensor(batch_input_mask, dtype=torch.long).to(device)
-	batch_token_type_ids = torch.tensor(batch_token_type_ids, dtype=torch.long).to(device)
+		batch_commonsense_ids = torch.tensor(batch_commonsense_ids, dtype=torch.long).cuda()
+		batch_commonsense_mask_full = torch.tensor(batch_commonsense_mask_full, dtype=torch.long).cuda()
+		batch_commonsense_mask = torch.tensor(batch_commonsense_mask, dtype=torch.long).cuda()
+	batch_input_ids = torch.tensor(batch_input_ids, dtype=torch.long).cuda()
+	batch_input_mask = torch.tensor(batch_input_mask, dtype=torch.long).cuda()
+	batch_token_type_ids = torch.tensor(batch_token_type_ids, dtype=torch.long).cuda()
 	if batch_label_ids[0] != None:
-		batch_label_ids = torch.tensor(batch_label_ids, dtype=torch.long).to(device)
+		batch_label_ids = torch.tensor(batch_label_ids, dtype=torch.long).cuda()
 	else:
 		batch_label_ids = None
 
