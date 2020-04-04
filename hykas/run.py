@@ -50,6 +50,8 @@ import json
 
 logger = logging.getLogger(__name__)
 
+cuda_dev=2
+
 ALL_MODELS = sum((tuple(conf.pretrained_config_archive_map.keys()) for conf in (BertConfig, RobertaConfig, AlbertConfig)), ())
 
 MODEL_CLASSES = {
@@ -402,14 +404,15 @@ def mCollateFn(batch):
 	if len(batch_commonsense_ids) == 0:
 		batch_commonsense_ids, batch_commonsense_mask_full, batch_commonsense_mask = None, None, None
 	else:
-		batch_commonsense_ids = torch.tensor(batch_commonsense_ids, dtype=torch.long).cuda()
-		batch_commonsense_mask_full = torch.tensor(batch_commonsense_mask_full, dtype=torch.long).cuda()
-		batch_commonsense_mask = torch.tensor(batch_commonsense_mask, dtype=torch.long).cuda()
-	batch_input_ids = torch.tensor(batch_input_ids, dtype=torch.long).cuda()
-	batch_input_mask = torch.tensor(batch_input_mask, dtype=torch.long).cuda()
-	batch_token_type_ids = torch.tensor(batch_token_type_ids, dtype=torch.long).cuda()
+
+		batch_commonsense_ids = torch.tensor(batch_commonsense_ids, dtype=torch.long).cuda(cuda_dev)
+		batch_commonsense_mask_full = torch.tensor(batch_commonsense_mask_full, dtype=torch.long).cuda(cuda_dev)
+		batch_commonsense_mask = torch.tensor(batch_commonsense_mask, dtype=torch.long).cuda(cuda_dev)
+	batch_input_ids = torch.tensor(batch_input_ids, dtype=torch.long).cuda(cuda_dev)
+	batch_input_mask = torch.tensor(batch_input_mask, dtype=torch.long).cuda(cuda_dev)
+	batch_token_type_ids = torch.tensor(batch_token_type_ids, dtype=torch.long).cuda(cuda_dev)
 	if batch_label_ids[0] != None:
-		batch_label_ids = torch.tensor(batch_label_ids, dtype=torch.long).cuda()
+		batch_label_ids = torch.tensor(batch_label_ids, dtype=torch.long).cuda(cuda_dev)
 	else:
 		batch_label_ids = None
 
