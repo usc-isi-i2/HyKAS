@@ -405,14 +405,14 @@ def mCollateFn(batch):
 		batch_commonsense_ids, batch_commonsense_mask_full, batch_commonsense_mask = None, None, None
 	else:
 
-		batch_commonsense_ids = torch.tensor(batch_commonsense_ids, dtype=torch.long).cuda(cuda_dev)
-		batch_commonsense_mask_full = torch.tensor(batch_commonsense_mask_full, dtype=torch.long).cuda(cuda_dev)
-		batch_commonsense_mask = torch.tensor(batch_commonsense_mask, dtype=torch.long).cuda(cuda_dev)
-	batch_input_ids = torch.tensor(batch_input_ids, dtype=torch.long).cuda(cuda_dev)
-	batch_input_mask = torch.tensor(batch_input_mask, dtype=torch.long).cuda(cuda_dev)
-	batch_token_type_ids = torch.tensor(batch_token_type_ids, dtype=torch.long).cuda(cuda_dev)
+		batch_commonsense_ids = torch.tensor(batch_commonsense_ids, dtype=torch.long).cuda()
+		batch_commonsense_mask_full = torch.tensor(batch_commonsense_mask_full, dtype=torch.long).cuda()
+		batch_commonsense_mask = torch.tensor(batch_commonsense_mask, dtype=torch.long).cuda()
+	batch_input_ids = torch.tensor(batch_input_ids, dtype=torch.long).cuda()
+	batch_input_mask = torch.tensor(batch_input_mask, dtype=torch.long).cuda()
+	batch_token_type_ids = torch.tensor(batch_token_type_ids, dtype=torch.long).cuda()
 	if batch_label_ids[0] != None:
-		batch_label_ids = torch.tensor(batch_label_ids, dtype=torch.long).cuda(cuda_dev)
+		batch_label_ids = torch.tensor(batch_label_ids, dtype=torch.long).cuda()
 	else:
 		batch_label_ids = None
 
@@ -432,6 +432,10 @@ def load_and_cache_examples(args, task, tokenizer, train_data, dev_data, cs_data
 		examples = processor.get_test_examples() 
 	else:
 		examples = processor.get_dev_examples() if evaluate else processor.get_train_examples()
+#	for e in examples:
+#		print(e.guid, e.text_a, e.text_b, e.label, e.concepts)
+#		input('continue')
+
 	pad_on_left = bool(args.model_type in ['xlnet'])
 	pad_token = tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0]
 	pad_token_segment_id = 4 if args.model_type in ['xlnet'] else 0

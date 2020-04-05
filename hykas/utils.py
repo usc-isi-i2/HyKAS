@@ -249,8 +249,9 @@ class QAProcessor(DataProcessor):
 				guid = "%s-%s-%s" % (set_type, i, k)
 				text_b = d[k+1]
 				text_a = d[0]
+				correct=(answer==k)
 				examples.append(
-						InputExample(guid=guid, text_a=text_a, text_b=text_b, label=answer))
+						InputExample(guid=guid, text_a=text_a, text_b=text_b, label=correct))
 			
 		return examples
 
@@ -314,12 +315,15 @@ class QAInjProcessor(DataProcessor):
 		for i, d in enumerate(data):
 			answer = str(d[-1])		
 
+			#print(d, answer)
+			#input('what now?')
 			for k in range(self.num_answers):
 				guid = "%s-%s" % (d[0], k)
 				text_b = d[k*2+2]
 				text_a = d[1]
+				correct=str(int(answer==str(k)))
 				examples.append(
-						InputExample(guid=guid, text_a=text_a, text_b=text_b, concepts=d[k*2+3], label=answer))
+						InputExample(guid=guid, text_a=text_a, text_b=text_b, concepts=d[k*2+3], label=correct))
 			
 		return examples
 
